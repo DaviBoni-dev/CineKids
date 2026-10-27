@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, use } from 'react';
+import { useEffect, useRef, use , Suspense} from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Maximize, Play, SkipForward } from 'lucide-react';
 import { shows } from '../../../lib/data';
 
-export default function WatchEpisode({ params }: { params: Promise<{ id: string }> }) {
+function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -21,10 +21,11 @@ export default function WatchEpisode({ params }: { params: Promise<{ id: string 
     let interval: NodeJS.Timeout;
 
     const inicializarPlayer = async () => {
-      const dashjs = (await import('dashjs')).default;
+      const dashjs = (await import('dashjs'));
 
       if (videoRef.current) {
         player = dashjs.MediaPlayer().create();
+        if(!show) return;
         player.initialize(videoRef.current, `http://localhost:8080/${show.id}/ep${epIndex + 1}/manifest.mpd`, false);
 
         player.on(dashjs.MediaPlayer.events.QUALITY_CHANGE_RENDERED, (e: any) => {
@@ -141,5 +142,18 @@ export default function WatchEpisode({ params }: { params: Promise<{ id: string 
         </section>
       </section>
     </main>
+  );
+}
+
+// 3. Crie a nova exportação com o limite de Suspense
+export default function WatchEpisode({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#111936] text-white">
+        Preparando reprodutor...
+      </div>
+    }>
+      <PlayerContent params={params} />
+    </Suspense>
   );
 }

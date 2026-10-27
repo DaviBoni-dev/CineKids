@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { ArrowLeft, Play, Star } from 'lucide-react'
 import { shows } from '../../../lib/data'
+import { Suspense } from 'react' 
 
 // 1. Adicionamos o "async" na função e alteramos o tipo do params para Promise
-export default async function ShowDetails({ params }: { params: Promise<{ id: string }> }) {
+async function ShowContent({ params }: { params: Promise<{ id: string }> }) {
   
   // 2. Aguardamos o Next.js extrair o ID da URL com segurança
   const resolvedParams = await params;
@@ -91,4 +92,16 @@ export default async function ShowDetails({ params }: { params: Promise<{ id: st
       </section>
     </main>
   )
+}
+
+export default function ShowDetails({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#fffaf1]">
+        <h1 className="text-2xl font-black text-[#25305f]">Carregando série...</h1>
+      </div>
+    }>
+      <ShowContent params={params} />
+    </Suspense>
+  );
 }
