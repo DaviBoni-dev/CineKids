@@ -9,7 +9,7 @@ import { shows } from '../../../lib/data';
 // para não precisar editar o código toda vez que o ngrok gerar uma URL nova.
 const VIDEO_BASE_URL =
   process.env.NEXT_PUBLIC_VIDEO_URL ??
-  'https://bed7-2804-1b3-6b01-fac4-f219-960b-a79-6faa.ngrok-free.app';
+  'https://graduates-carlo-essential-tracking.trycloudflare.com/';
 
 function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -38,26 +38,11 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
 
       player = dashjs.MediaPlayer().create();
 
-      const addNgrokHeader = (xhr: XMLHttpRequest) => {
-  xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-  return xhr;
-};
-
-if (typeof player.extend === 'function') {
-  // dash.js v4
-  console.log('[DEBUG] usando extend (v4)');
-  player.extend('RequestModifier', () => ({
-    modifyRequestHeader: addNgrokHeader,
-    modifyRequestURL: (url: string) => url,
-  }), true);
-} else if (typeof player.addRequestInterceptor === 'function') {
-  // dash.js v5
-  console.log('[DEBUG] usando addRequestInterceptor (v5)');
-  player.addRequestInterceptor(async (request: any) => {
-    request.headers = { ...request.headers, 'ngrok-skip-browser-warning': 'true' };
-    return request;
-  });
-}
+      player.initialize(
+  videoRef.current,
+  `${VIDEO_BASE_URL}/${show.id}/ep${epIndex + 1}/manifest.mpd`,
+  false
+);
 
       player.initialize(
         videoRef.current,
