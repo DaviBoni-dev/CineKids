@@ -26,7 +26,7 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
       if (videoRef.current) {
         player = dashjs.MediaPlayer().create();
         if(!show) return;
-        player.initialize(videoRef.current, `http://https://bed7-2804-1b3-6b01-fac4-f219-960b-a79-6faa.ngrok-free.app/${show.id}/ep${epIndex + 1}/manifest.mpd`, false);
+        player.initialize(videoRef.current, `https://bed7-2804-1b3-6b01-fac4-f219-960b-a79-6faa.ngrok-free.app/${show.id}/ep${epIndex + 1}/manifest.mpd`, false);
 
         player.on(dashjs.MediaPlayer.events.QUALITY_CHANGE_RENDERED, (e: any) => {
           console.log(`[MÉTRICA] Qualidade adaptada para o nível: ${e.newQuality}`);
