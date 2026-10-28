@@ -38,19 +38,26 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
 
       player = dashjs.MediaPlayer().create();
 
-      // Faz o ngrok free NÃO interceptar a requisição com a página de aviso.
-      // Precisa ser registrado ANTES do initialize().
-      player.extend(
-        'RequestModifier',
-        () => ({
-          modifyRequestHeader: (xhr: XMLHttpRequest) => {
-            xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-            return xhr;
-          },
-          modifyRequestURL: (url: string) => url,
-        }),
-        true
-      );
+      const addNgrokHeader = (xhr: XMLHttpRequest) => {
+  xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+  return xhr;
+};
+
+if (typeof player.extend === 'function') {
+  // dash.js v4
+  console.log('[DEBUG] usando extend (v4)');
+  player.extend('RequestModifier', () => ({
+    modifyRequestHeader: addNgrokHeader,
+    modifyRequestURL: (url: string) => url,
+  }), true);
+} else if (typeof player.addRequestInterceptor === 'function') {
+  // dash.js v5
+  console.log('[DEBUG] usando addRequestInterceptor (v5)');
+  player.addRequestInterceptor(async (request: any) => {
+    request.headers = { ...request.headers, 'ngrok-skip-browser-warning': 'true' };
+    return request;
+  });
+}
 
       player.initialize(
         videoRef.current,
