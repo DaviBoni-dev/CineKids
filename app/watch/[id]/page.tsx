@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useRef, use, Suspense } from 'react';
+import { useEffect, useRef, use, Suspense, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Maximize, Play } from 'lucide-react';
 import { shows } from '../../../lib/data';
 
-// URL base do servidor de vídeo (ngrok). Defina NEXT_PUBLIC_VIDEO_URL na Vercel
-// para não precisar editar o código toda vez que o ngrok gerar uma URL nova.
+// URL base do servidor de vídeo. Defina NEXT_PUBLIC_VIDEO_URL na Vercel
+// para não precisar editar o código toda vez que o túnel gerar uma URL nova.
+// (Nota: Removi a barra final "/" para evitar duplicação nas concatenações)
 const VIDEO_BASE_URL =
   process.env.NEXT_PUBLIC_VIDEO_URL ??
-  'https://graduates-carlo-essential-tracking.trycloudflare.com/';
+  'https://graduates-carlo-essential-tracking.trycloudflare.com';
 
 function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -21,6 +22,17 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
 
   const show = shows.find((s) => s.id === showId);
   const episode = show?.episodes[epIndex];
+
+  // Estado para armazenar os capítulos gerados pela IA
+  const [capitulos, setCapitulos] = useState<{time: number, title: string}[]>([]);
+
+  // Função para saltar para o momento exato do vídeo
+  const pularParaCapitulo = (tempoEmSegundos: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = tempoEmSegundos;
+      videoRef.current.play(); // Garante que o vídeo retoma a reprodução
+    }
+  };
 
   useEffect(() => {
     // Verifica ANTES de criar o player, para não vazar instância
@@ -38,12 +50,7 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
 
       player = dashjs.MediaPlayer().create();
 
-      player.initialize(
-  videoRef.current,
-  `${VIDEO_BASE_URL}/${show.id}/ep${epIndex + 1}/manifest.mpd`,
-  false
-);
-
+      // Inicializa o player DASH
       player.initialize(
         videoRef.current,
         `${VIDEO_BASE_URL}/${show.id}/ep${epIndex + 1}/manifest.mpd`,
@@ -73,8 +80,24 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
       if (interval) clearInterval(interval);
       if (player) player.destroy();
     };
-    // Recria o player se mudar de série/episódio
-  }, [showId, epIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showId, epIndex, show]);
+
+  // Novo useEffect para carregar os capítulos do JSON gerado pelo Gemini
+  useEffect(() => {
+    const carregarCapitulos = async () => {
+      try {
+        const resposta = await fetch(`${VIDEO_BASE_URL}/${show?.id}/ep${epIndex + 1}/chapters.json`);
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          setCapitulos(dados);
+        }
+      } catch (erro) {
+        console.log("Nenhum capítulo mágico encontrado para este episódio.", erro);
+      }
+    };
+
+    if (show) carregarCapitulos();
+  }, [show, epIndex]);
 
   // Se a URL estiver errada
   if (!show || !episode) {
@@ -134,6 +157,24 @@ function PlayerContent({ params }: { params: Promise<{ id: string }> }) {
             Duração: {episode.duration}
           </span>
         </div>
+
+        {/* Trilho de Capítulos Gerados por IA */}
+        {capitulos.length > 0 && (
+          <section className="mt-8 rounded-[24px] bg-white/5 p-6 border border-white/10">
+            <h3 className="mb-4 text-lg font-black text-[#ffd447]">✨ Momentos Mágicos</h3>
+            <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
+              {capitulos.map((cap, index) => (
+                <button
+                  key={index}
+                  onClick={() => pularParaCapitulo(cap.time)}
+                  className="whitespace-nowrap rounded-full bg-[#111936] px-5 py-2.5 text-sm font-extrabold text-white/80 border border-white/10 shadow-sm transition hover:-translate-y-1 hover:bg-[#62dfe0] hover:text-[#111936] hover:shadow-[0_4px_0_#459c9d]"
+                >
+                  {cap.title}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Trilho de Próximos Episódios */}
         <section className="pb-14 pt-10">
